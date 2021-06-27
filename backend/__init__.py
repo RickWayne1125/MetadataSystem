@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, List, Set
+import inspect
+import re
+from typing import Any, Dict, List, Set, Type as Class
 
 
 class Table(object):
     """Class for accessing tables."""
 
     def __init__(self, file: str, name: str, desc: str, fields: List[Field]):
-        pass  # TODO
+        self._file = open(file, 'w')
+        self._name = name
+        self._desc = desc
+        self._fields = fields
 
     @staticmethod
     def load(file: str) -> Table:
@@ -44,7 +49,14 @@ class Field(object):
     """Class for accessing fields."""
 
     def __init__(self, name: str, desc: str, constraints: Set[Constraint]):
-        pass  # TODO
+        self._name = name
+        self._desc = desc
+        self._constraints = constraints
+
+        types = [x for x in self._constraints if isinstance(x, Type)]
+        if len(types) != 1:
+            raise Exception('Expected one and only one type constraint')  # TODO Unify exceptions.
+        self._type = types[0]
 
     @property
     def name(self) -> str:
@@ -71,7 +83,9 @@ class Field(object):
 
     @type.setter
     def type(self, type: Type):
-        self._type = type  # TODO
+        self._constraints.remove(self._type)
+        self._type = type
+        self._constraints.add(type)
 
     @property
     def constraints(self) -> Set[Constraint]:
@@ -82,12 +96,11 @@ class Field(object):
 class Constraint(object, metaclass=abc.ABCMeta):
     """Super class of all constraints. Extend this class to create new types of constraints."""
 
-    def __init_subclass__(cls, **kwargs):
-        pass  # TODO
+    registry: Dict[str, Class[Constraint]] = {}
 
-    @abc.abstractmethod
-    def __init__(self, **kwargs):
-        pass
+    def __init_subclass__(cls, **kwargs):
+        if not inspect.isabstract(cls):
+            Constraint.registry['_'.join(re.findall(r'[A-Z][a-z]*', cls.__name__)).upper()] = cls
 
     @abc.abstractmethod
     def verify(self, current: Any, whole: List[Any]) -> bool:
@@ -99,11 +112,14 @@ class Constraint(object, metaclass=abc.ABCMeta):
 class Type(Constraint, metaclass=abc.ABCMeta):
     """Super class of all data types. Extend this class to create new data types"""
 
-    def __init_subclass__(cls, **kwargs):
-        pass  # TODO
+    registry: Dict[str, Class[Type]] = {}
 
-    @abc.abstractmethod
+    def __init_subclass__(cls, **kwargs):
+        if not inspect.isabstract(cls):
+            Type.registry['_'.join(re.findall(r'[A-Z][a-z]*', cls.__name__)).upper()] = cls
+
     @property
+    @abc.abstractmethod
     def length(self) -> int:
         """How many bytes should this data type occupy. If it is not determined, returns -1."""
         pass
