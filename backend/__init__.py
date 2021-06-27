@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import abc
 import inspect
+import json
 import re
 from typing import Any, Dict, List, Set, Type as Class
+
+
+def _to_unified_name(cls: Class) -> str:
+    return '_'.join(re.findall(r'[A-Z][a-z]*', cls.__name__)).upper()
 
 
 class Table(object):
     """Class for accessing tables."""
 
     def __init__(self, file: str, name: str, desc: str, fields: List[Field]):
-        self._file = open(file, 'w')
+        self._file = file
         self._name = name
         self._desc = desc
         self._fields = fields
@@ -18,12 +23,49 @@ class Table(object):
     @staticmethod
     def load(file: str) -> Table:
         """Load metadata from a file on the disk."""
-        pass  # TODO
+        with open(file, 'r') as f:
+            table_meta = json.load(f)
+        return Table(
+            file,
+            table_meta['name'],
+            table_meta['desc'],
+            [
+                Field(
+                    field_meta['name'],
+                    field_meta['desc'],
+                    set([
+                        Constraint.registry[constraint_meta]()
+                        if isinstance(constraint_meta, str) else
+                        Constraint.registry[constraint_meta['type']](**constraint_meta['args'])
+                        for constraint_meta in field_meta['constraints']
+                    ])
+                )
+                for field_meta in table_meta['fields']
+            ]
+        )
 
     @staticmethod
     def save(table: Table):
         """Save a table back to its related file."""
-        pass  # TODO
+        obj = {
+            'name': table.name,
+            'desc': table.desc,
+            'fields': [
+                {
+                    'name': field.name,
+                    'desc': field.desc,
+                    'constraints': [
+                        _to_unified_name(constraint.__class__)
+                        if len(constraint.args) == 0 else
+                        {'type': _to_unified_name(constraint.__class__), 'args': constraint.args}
+                        for constraint in field.constraints
+                    ]
+                }
+                for field in table.fields
+            ]
+        }
+        with open(table._file, 'w') as f:
+            json.dump(obj, f)
 
     @property
     def name(self) -> str:
@@ -100,7 +142,11 @@ class Constraint(object, metaclass=abc.ABCMeta):
 
     def __init_subclass__(cls, **kwargs):
         if not inspect.isabstract(cls):
-            Constraint.registry['_'.join(re.findall(r'[A-Z][a-z]*', cls.__name__)).upper()] = cls
+            Constraint.registry[_to_unified_name(cls)] = cls
+
+    @abc.abstractmethod
+    def __init__(self, **kwargs):
+        self._args = kwargs
 
     @abc.abstractmethod
     def verify(self, current: Any, whole: List[Any]) -> bool:
@@ -108,15 +154,18 @@ class Constraint(object, metaclass=abc.ABCMeta):
         corresponding field."""
         pass
 
+    @property
+    def args(self) -> Dict[str, Any]:
+        """Access the specific arguments of this constraint."""
+        return self._args
+
 
 class Type(Constraint, metaclass=abc.ABCMeta):
     """Super class of all data types. Extend this class to create new data types"""
 
-    registry: Dict[str, Class[Type]] = {}
-
     def __init_subclass__(cls, **kwargs):
         if not inspect.isabstract(cls):
-            Type.registry['_'.join(re.findall(r'[A-Z][a-z]*', cls.__name__)).upper()] = cls
+            Constraint.registry[_to_unified_name(cls)] = cls
 
     @property
     @abc.abstractmethod
