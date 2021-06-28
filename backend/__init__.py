@@ -90,11 +90,17 @@ class Table(object):
 class Field(object):
     """Class for accessing fields."""
 
+    class __ConstraintSet(set):
+        def add(self, element: Constraint):
+            super().update(element.implicated_constraints)
+
     def __init__(self, name: str, desc: str, constraints: Set[Constraint]):
         self._name = name
         self._desc = desc
-        self._constraints = constraints
+        self._constraints = Field.__ConstraintSet()
 
+        for c in constraints:
+            self._constraints.add(c)
         types = [x for x in self._constraints if isinstance(x, Type)]
         if len(types) != 1:
             raise Exception('Expected one and only one type constraint')  # TODO Unify exceptions.
@@ -144,6 +150,14 @@ class Constraint(object, metaclass=abc.ABCMeta):
         if not inspect.isabstract(cls):
             Constraint.registry[_to_unified_name(cls)] = cls
 
+    def __eq__(self, other: Constraint):
+        if self.__class__ != other.__class__:
+            return False
+        return self._args == other._args
+
+    def __hash__(self) -> int:
+        return hash(self.__class__)
+
     @abc.abstractmethod
     def __init__(self, **kwargs):
         self._args = kwargs
@@ -158,6 +172,11 @@ class Constraint(object, metaclass=abc.ABCMeta):
     def args(self) -> Dict[str, Any]:
         """Access the specific arguments of this constraint."""
         return self._args
+
+    @property
+    def implicated_constraints(self) -> Set[Constraint]:
+        """Get all implicated constraints, for example, PRIMARY_KEY to {NOT_NULL, UNIQUE}."""
+        return {self}
 
 
 class Type(Constraint, metaclass=abc.ABCMeta):
