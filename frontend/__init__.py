@@ -4,7 +4,7 @@ import os
 
 from typing import Callable, Dict, List
 
-from backend import Table, Type
+from backend import Field, Table, Type, constraints
 
 
 def __choice_to_function(message: str, choices: Dict[str, Callable[[str], bool]], buffer: Dict[str, Table],
@@ -110,6 +110,17 @@ def back(table: Table, root_path):
 
 
 def add_field(table: Table, root_path) -> bool:
+    info = PyInquirer.prompt(__enter_field)
+    name = info['name']
+    desc = info['desc']
+
+    # TO DO
+    # type = info['type']
+    constraints = {}
+
+    field = Field(name, desc, constraints)
+    # Need a check funct here -- to make sure no duplications occur
+    table.fields.append(field)
 
     return True
 
@@ -138,4 +149,24 @@ def create_table(buffer: Dict[str, Table], root_path) -> bool:
 
 
 def drop_table(buffer: Dict[str, Table], root_path) -> bool:
+    name = PyInquirer.prompt(__enter_table)['name']
+    __show_table(buffer, name)
+    table = buffer[name]
+
+    if PyInquirer.prompt(
+            {
+                'type': 'confirm',
+                        'name': 'confirm',
+                        'message': 'This Table is About to Be Removed, Continue?',
+                        'default': False
+            })['confirm']:
+        path = table._file
+        if os.path.exists(path):
+            os.remove(path)
+            print('Local Has Been Deleted Successfully!')
+        else:
+            raise Exception('No Such File: ' + path)
+        buffer.pop(name)
+    else:
+        print('Aborted.')
     return True
