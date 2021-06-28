@@ -1,10 +1,33 @@
 import os
 from backend import *
 import frontend as fe
+import PyInquirer
 
 
 def main():
-    root_path = (input('Please input the root path of database: '))
+    db_dir = 'database'
+
+    op = PyInquirer.prompt([{
+        'type': 'list', 'name': 'op', 'message': 'Select Your Operation',
+        'choices': ['Enter a Database', 'Create a Database', 'Exit']
+    }])['op']
+
+    if op == 'Enter a Database':
+        databases = []
+        for root, dirs, files in os.walk(db_dir):
+            for dir in dirs:
+                databases.append(dir)
+        root_path = os.path.join(db_dir,
+                                 PyInquirer.prompt([{
+                                     'type': 'list', 'name': 'op', 'message': 'Select Your Operation',
+                                     'choices': databases
+                                 }])['op'])
+    elif op == 'Create a Database':
+        db_name = input('Enter The New Database Name: ')
+        root_path = os.path.join(db_dir, db_name)
+        os.mkdir(root_path)
+    else:
+        fe.exit()
 
     print()
     print('Start Loading Metadata...')
@@ -19,7 +42,7 @@ def main():
     print(len(buffer), ' Tables Are Loaded in Total.')
     print()
 
-    while fe.__choice_to_function('Select your operation: ',
+    while fe.__choice_to_function('Select Your Operation: ',
                                   {
                                       'Show Tables': fe.show_tables,
                                       'Show a Table': fe.show_table,

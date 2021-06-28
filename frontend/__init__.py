@@ -7,9 +7,11 @@ from typing import Callable, Dict, List
 from backend import Field, Table, Type
 from backend.constraints import *
 
-types = {'integer': Integer, 'character': Char}
-cons = [{'name': 'not null'}]    # more constraints TO DO
-cons_to_class = {'not null': NotNull}
+types = {'integer': Integer, 'character': Char, 'real': Real, 'text': Text}
+cons = [{'name': 'not null'}, {'name': 'auto increment'}, {'name': 'unique'}, {'name': 'primary key'},
+        {'name': 'foreign key'}]  # more constraints TO DO
+cons_to_class = {'not null': NotNull, 'auto increment': AutoIncrement, 'unique': Unique, 'primary key': PrimaryKey,
+                 'foreign key': ForeignKey}
 
 
 def __choice_to_function(message: str, choices: Dict[str, Callable[[str], bool]], buffer: Dict[str, Table],
@@ -59,7 +61,7 @@ __enter_field = [{
 }]
 
 __enter_desc = [{
-    'type': 'input', 'name': 'desc', 'message': 'Please Enter The Descption:', 'validate': __not_null
+    'type': 'input', 'name': 'desc', 'message': 'Please Enter The Description:', 'validate': __not_null
 }]
 
 
@@ -89,7 +91,7 @@ def show_table(buffer: Dict[str, Table], root_path) -> bool:
 def __show_table(buffer: Dict[str, Table], name: str):
     headers = ['FieldName', 'Description']
     data = []
-    if(buffer.__contains__(name)):
+    if (buffer.__contains__(name)):
         table = buffer[name]
         for field in table.fields:
             row = [field.name, field.desc]
@@ -98,7 +100,7 @@ def __show_table(buffer: Dict[str, Table], name: str):
         print(tabulate.tabulate(data, headers, tablefmt='pretty'))
         print()
     else:
-        print('No Table Named '+name+' Exists!')
+        print('No Table Named ' + name + ' Exists!')
 
 
 def enter_table(buffer: Dict[str, Table], root_path) -> bool:
@@ -125,7 +127,7 @@ def add_field(table: Table, root_path) -> bool:
     desc = info['desc']
 
     # TO DO
-    if(info['type'] == 'character'):
+    if (info['type'] == 'character'):
         length = input('Enter The Char Length: ')
         type = types[info['type']](length)
     else:
@@ -133,7 +135,11 @@ def add_field(table: Table, root_path) -> bool:
 
     other_cons = []
     for c in info['other_cons']:
-        temp_cons = cons_to_class[c]()
+        if c == 'foreign key':
+            ref = input('Enter The Reference Table Name: ')
+            temp_cons = cons_to_class[c](ref)
+        else:
+            temp_cons = cons_to_class[c]()
         other_cons.append(temp_cons)
     other_cons = set(other_cons)
     constraints = {type} | other_cons
@@ -146,6 +152,12 @@ def add_field(table: Table, root_path) -> bool:
 
 
 def remove_field(table: Table, root_path) -> bool:
+    target = input('Please Input The Field Name: ')
+    for field in table.fields:
+        if field.name == target:
+            table.fields.remove(field)
+            break
+    table.save(table)
     return True
 
 
@@ -176,9 +188,9 @@ def drop_table(buffer: Dict[str, Table], root_path) -> bool:
     if PyInquirer.prompt(
             {
                 'type': 'confirm',
-                        'name': 'confirm',
-                        'message': 'This Table is About to Be Removed, Continue?',
-                        'default': False
+                'name': 'confirm',
+                'message': 'This Table is About to Be Removed, Continue?',
+                'default': False
             })['confirm']:
         path = table._file
         if os.path.exists(path):

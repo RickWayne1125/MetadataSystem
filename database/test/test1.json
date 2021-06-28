@@ -1,0 +1,32 @@
+{
+  "name": "test1",
+  "desc": "test 1",
+  "fields": [
+    {
+      "name": "2",
+      "desc": "2",
+      "constraints": [
+        "INTEGER"
+      ]
+    },
+    {
+      "name": "f1",
+      "desc": "test",
+      "constraints": [
+        "INTEGER",
+        "NOT_NULL"
+      ]
+    },
+    {
+      "name": "key",
+      "desc": "key test",
+      "constraints": [
+        "NOT_NULL",
+        "UNIQUE",
+        "INTEGER",
+        "PRIMARY_KEY",
+        "AUTO_INCREMENT"
+      ]
+    }
+  ]
+}
