@@ -1,1 +1,1 @@
-{"name": "test1", "desc": "test 1", "fields": []}
+{"name": "test1", "desc": "test 1", "fields": [{"name": "1", "desc": "1", "constraints": ["INTEGER"]}, {"name": "2", "desc": "2", "constraints": ["INTEGER"]}, {"name": "f1", "desc": "test", "constraints": ["NOT_NULL", "INTEGER"]}]}

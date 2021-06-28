@@ -4,7 +4,12 @@ import os
 
 from typing import Callable, Dict, List
 
-from backend import Field, Table, Type, constraints
+from backend import Field, Table, Type
+from backend.constraints import *
+
+types = {'integer': Integer, 'character': Char}
+cons = [{'name': 'not null'}]    # more constraints TO DO
+cons_to_class = {'not null': NotNull}
 
 
 def __choice_to_function(message: str, choices: Dict[str, Callable[[str], bool]], buffer: Dict[str, Table],
@@ -47,8 +52,10 @@ __enter_field = [{
     'type': 'input', 'name': 'name', 'message': 'Please Enter The Field Name:', 'validate': __not_null
 }, {
     'type': 'input', 'name': 'desc', 'message': 'Please Describe This Field:', 'validate': __not_null
-    # }, {
-    #     'type': 'input', 'name': 'type', 'message': 'Please Describe This Table:', 'validate': __not_null
+}, {
+    'type': 'list', 'name': 'type', 'message': 'Please Choose The Field Type:', 'choices': list(types.keys())
+}, {
+    'type': 'checkbox', 'name': 'other_cons', 'message': 'Please Choose Other Constraints:', 'choices': cons
 }]
 
 __enter_desc = [{
@@ -82,13 +89,16 @@ def show_table(buffer: Dict[str, Table], root_path) -> bool:
 def __show_table(buffer: Dict[str, Table], name: str):
     headers = ['FieldName', 'Description']
     data = []
-    table = buffer[name]
-    for field in table.fields:
-        row = [field.name, field.desc]
-        data.append(row)
-    print()
-    print(tabulate.tabulate(data, headers, tablefmt='pretty'))
-    print()
+    if(buffer.__contains__(name)):
+        table = buffer[name]
+        for field in table.fields:
+            row = [field.name, field.desc]
+            data.append(row)
+        print()
+        print(tabulate.tabulate(data, headers, tablefmt='pretty'))
+        print()
+    else:
+        print('No Table Named '+name+' Exists!')
 
 
 def enter_table(buffer: Dict[str, Table], root_path) -> bool:
@@ -115,13 +125,23 @@ def add_field(table: Table, root_path) -> bool:
     desc = info['desc']
 
     # TO DO
-    # type = info['type']
-    constraints = {}
+    if(info['type'] == 'character'):
+        length = input('Enter The Char Length: ')
+        type = types[info['type']](length)
+    else:
+        type = types[info['type']]()
+
+    other_cons = []
+    for c in info['other_cons']:
+        temp_cons = cons_to_class[c]()
+        other_cons.append(temp_cons)
+    other_cons = set(other_cons)
+    constraints = {type} | other_cons
 
     field = Field(name, desc, constraints)
     # Need a check funct here -- to make sure no duplications occur
     table.fields.append(field)
-
+    table.save(table)
     return True
 
 
