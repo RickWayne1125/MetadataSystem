@@ -19,7 +19,7 @@ def main():
                 databases.append(dir)
         root_path = os.path.join(db_dir,
                                  PyInquirer.prompt([{
-                                     'type': 'list', 'name': 'op', 'message': 'Select Your Operation',
+                                     'type': 'list', 'name': 'op', 'message': 'Select a Database',
                                      'choices': databases
                                  }])['op'])
     elif op == 'Create a Database':
